@@ -4,36 +4,44 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RailwayControl {
+
+    private int trainsCurrentlyInRailway;
     private boolean railwayFree;
     private List<String> trainsTransited;
     private String currentDirection;
     private int trainDirectionCounter;
 
-    public RailwayControl(String currentDirection){
-        railwayFree = true;
+    private final int MAX_TRAINS_IN_SAME_DIRECTION = 3;
+
+    public RailwayControl(String initialDirection) {
+        trainsCurrentlyInRailway = 0;
         trainsTransited = new ArrayList<>();
-        this.currentDirection = currentDirection;
+        this.currentDirection = initialDirection;
         trainDirectionCounter = 0;
     }
 
     public void requestRailwayPermission(String trainName, String direction) throws InterruptedException {
-        // Si ya han pasado 3 trenes y la dirección actual del tren que quiere entrar es distinta
-        // Cambiamos la dirección de la vía para dejar pasar a ese tren
-        if(trainDirectionCounter==3 && (!direction.equals(currentDirection))){
-            //Cambiamos la dirección de la vía
-            currentDirection = direction;
-        }
-
         synchronized (this) {
-            // No puedes entrar si no coincide la dirección y la vía está ocupada
-            while ((!(direction.equals(currentDirection))) && (!railwayFree)) {
-                wait();
-                System.out.println("Via ocupada. Tren " + trainName + " debe esperar: vía ocupada por trenes "
-                        + this.currentDirection);
-            }
 
-            System.out.println("Tren " + trainName + " Entra en la vía " + currentDirection);
-            railwayFree = false;
+            if (trainDirectionCounter == MAX_TRAINS_IN_SAME_DIRECTION && (!direction.equals(currentDirection))) {
+                // Si el contador llegó a 3 y el tren que pide entrar tiene dirección opuesta, cambiamos la vía.
+                System.out.println("\n Han pasado " + MAX_TRAINS_IN_SAME_DIRECTION + "trenes (" + currentDirection + "). Cediendo el paso a " + direction + ".");
+                currentDirection = direction;
+                trainDirectionCounter = 0;
+            }
+            // Condición de Espera (Espera no activa)
+            // El tren espera si:
+            // a) La vía está ocupada (trainsCurrentlyInRailway > 0)
+            // b) La dirección solicitada no coincide con la dirección actual permitida.
+                while (trainsCurrentlyInRailway > 0 || !direction.equals(currentDirection)){
+                    System.out.println("Vía ocupada. Tren " + trainName + " debe esperar. Ocupada por: "
+                            + currentDirection + " (Trenes: " + trainsCurrentlyInRailway + ")");
+                    wait();
+
+
+            }
+            System.out.println("Tren " + trainName + " entra en la vía " + currentDirection);
+            trainsCurrentlyInRailway++;
             trainsTransited.add(trainName);
             trainDirectionCounter++;
         }
@@ -41,8 +49,14 @@ public class RailwayControl {
 
     }
 
-    public synchronized void trainArrival(){
+    public synchronized void trainArrival() {
+        trainsCurrentlyInRailway--;
+        System.out.println("Tren ha salido de la vía. Trenes restantes en vía: " + trainsCurrentlyInRailway);
 
+        if(trainsCurrentlyInRailway == 0){
+            System.out.println("Vía libre. Notificando a los trenes en espera...");
+            notifyAll();
+        }
     }
 
 }
