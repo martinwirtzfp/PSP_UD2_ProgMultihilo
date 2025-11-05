@@ -49,7 +49,7 @@ public class RailwayControl {
 
     }
 
-    public synchronized void trainArrival() {
+    public synchronized void trainArrival(String trainName, String direction) {
         trainsCurrentlyInRailway--;
         System.out.println("Tren ha salido de la vía. Trenes restantes en vía: " + trainsCurrentlyInRailway);
 
